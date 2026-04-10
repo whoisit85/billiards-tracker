@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>🎱 Billiards Score Tracker</title>
+        <style>
+            :root {
+                --bg: #07111f;
+                --bg-alt: #101e3f;
+                --panel: rgba(18, 32, 79, 0.95);
+                --panel-alt: rgba(16, 28, 56, 0.92);
+                --text: #eef2ff;
+                --muted: #9fb1d2;
+                --accent: #3cd390;
+                --accent-soft: rgba(60, 211, 144, 0.16);
+                --danger: #ff4f6f;
+                --danger-soft: rgba(255, 79, 111, 0.15);
+                --border: rgba(255,255,255,0.08);
+                --shadow: 0 18px 35px rgba(0,0,0,0.35);
+            }
+            * { box-sizing: border-box; }
+            body {
+                margin: 0;
+                font-family: Inter, system-ui, -apple-system, Segoe UI, sans-serif;
+                color: var(--text);
+                background: radial-gradient(circle at top, rgba(85, 128, 255, 0.14), transparent 28%),
+                            radial-gradient(circle at 20% 10%, rgba(65, 36, 146, 0.22), transparent 18%),
+                            linear-gradient(180deg, #070f1a 0%, #0d1f3b 100%);
+                min-height: 100vh;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                padding: 1.25rem;
+            }
+            .board {
+                width: min(100%, 700px);
+                max-width: 100%;
+                background: linear-gradient(180deg, rgba(10,18,36,0.96), rgba(16,28,56,0.95));
+                border: 1px solid rgba(255,255,255,0.08);
+                border-radius: 24px;
+                padding: 1rem;
+                box-shadow: var(--shadow);
+                backdrop-filter: blur(12px);
+            }
+            .head { text-align: center; margin-bottom: 0.8rem; }
+            .head h1 { margin: 0.2rem 0; font-size: 1.4rem; }
+            .head p { margin: 0; color: #b4b8cc; }
+            .players { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: .6rem; }
+            .player-card {
+                background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+                border: 1px solid rgba(255,255,255,0.08);
+                border-radius: 22px;
+                padding: 0.85rem;
+                min-height: 150px;
+                position: relative;
+                box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03), 0 18px 36px rgba(0,0,0,0.22);
+                backdrop-filter: blur(6px);
+            }
+            .player-card h1 {
+                margin: 0;
+                font-size: 1rem;
+                font-weight: 800;
+                letter-spacing: 0.02em;
+                color: var(--text);
+                text-transform: none;
+            }
+            .player-header {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                justify-content: space-between;
+                gap: 0.65rem;
+                margin-bottom: 1rem;
+            }
+            .player-header h1 {
+                flex: 1;
+                text-align: center;
+            }
+            .edit-btn {
+                position: static;
+                margin: 0;
+                background: rgba(255,255,255,0.08);
+                color: var(--muted);
+                width: 40px;
+                height: 40px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 14px;
+            }
+            .player-card input {
+                width: 100%;
+                padding: 0.75rem 0.9rem;
+                border-radius: 14px;
+                border: 1px solid rgba(255,255,255,0.08);
+                background: rgba(255,255,255,0.06);
+                color: var(--text);
+            }
+            .score {
+                margin: 0.8rem 0;
+                font-size: 1.15rem;
+                font-weight: 700;
+                text-align: center;
+            }
+            .control-row { display: flex; gap: 0.85rem; justify-content: space-between; flex-wrap: wrap; }
+            .control-row button {
+                flex: 1 1 42%;
+                height: 38px;
+                padding: 0 0.5rem;
+                border: none;
+                border-radius: 12px;
+                color: #fff;
+                background: #3c5bd6;
+                font-size: 0.88rem;
+                font-weight: 700;
+                cursor: pointer;
+                min-width: 84px;
+                transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+                box-shadow: 0 10px 14px rgba(18, 32, 72, 0.18);
+            }
+            .control-row button:hover { transform: translateY(-1px); }
+            .control-row button.secondary { background: rgba(96, 117, 170, 0.95); }
+            .control-row button.danger { background: var(--danger); }
+            .control-row button.accent { background: var(--accent); }
+            .status {
+                text-align: center;
+                margin: 1rem 0;
+                padding: 0.9rem 1rem;
+                border-radius: 18px;
+                background: rgba(60,211,144,0.1);
+                color: #d8ffe8;
+                min-height: 1.75rem;
+                box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+            }
+            .full-controls {
+                margin-top: 1rem;
+                display: flex;
+                justify-content: center;
+                flex-wrap: wrap;
+                gap: 0.65rem;
+            }
+            .full-controls button {
+                width: 100%;
+                padding: 0.95rem 0.5rem;
+                border: none;
+                border-radius: 18px;
+                color: #fff;
+                background: var(--danger);
+                font-size: 1rem;
+                font-weight: 700;
+                cursor: pointer;
+                box-shadow: 0 18px 28px rgba(255,79,111,0.22);
+                transition: transform 0.2s ease, filter 0.2s ease;
+            }
+            .full-controls button.secondary {
+                background: rgba(96, 117, 170, 0.95);
+                box-shadow: 0 14px 20px rgba(12, 30, 62, 0.22);
+            }
+            .full-controls button:hover { transform: translateY(-1px); filter: brightness(1.05); }
+            .settings > div { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+            .settings label {
+                margin-bottom: 0;
+                font-size: 0.95rem;
+                color: var(--text);
+                letter-spacing: 0.01em;
+            }
+            .settings select, .settings input {
+                font-size: 0.95rem;
+                color: var(--text);
+                background: rgba(255,255,255,0.05);
+                border: 1px solid rgba(255,255,255,0.08);
+                border-radius: 14px;
+                padding: 0.75rem 0.9rem;
+            }
+            .lang-switcher {
+                display: flex;
+                gap: 0.55rem;
+                flex-wrap: wrap;
+                align-items: center;
+            }
+            .lang-switcher button {
+                border: 1px solid rgba(255,255,255,0.12);
+                background: rgba(255,255,255,0.06);
+                color: var(--text);
+                border-radius: 14px;
+                padding: 0.65rem 0.9rem;
+                cursor: pointer;
+                min-width: 110px;
+                font-weight: 700;
+                transition: background 0.2s ease, transform 0.2s ease;
+            }
+            .lang-switcher button:hover {
+                background: rgba(255,255,255,0.12);
+            }
+            .lang-switcher button.active {
+                background: rgba(60, 211, 144, 0.18);
+                border-color: rgba(60, 211, 144, 0.4);
+                transform: translateY(-1px);
+            }
+            .fullscreen-score { display: none; position: fixed; inset: 0; width: 100%; height: 100%; background: rgba(2, 10, 26, 0.98); z-index: 1000; justify-content: center; align-items: center; flex-direction: column; gap: 0; cursor: pointer; padding: 0; margin: 0; overflow: hidden; }
+            .fullscreen-score.active { display: flex; }
+            .fullscreen-score-display { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; width: min(100%, 560px); max-width: 96vw; min-height: 52vh; max-height: min(100%, calc(100vh - 2rem)); padding: 2rem 1.2rem; box-sizing: border-box; margin: auto; overflow: hidden; background: rgba(8, 16, 38, 0.98); border: 1px solid rgba(255,255,255,0.14); border-radius: 28px; box-shadow: 0 32px 72px rgba(0,0,0,0.42); }
+            .fullscreen-game-label { margin-bottom: 1rem; font-size: 0.95rem; color: #a4b3d8; letter-spacing: 0.08em; text-transform: uppercase; }
+            .fullscreen-score-display .player-scores { font-size: 3.6rem; font-weight: 700; color: #fff; margin-bottom: 0.9rem; line-height: 1; }
+            .fullscreen-score-display .winner-text { font-size: 2.2rem; font-weight: 700; color: var(--accent); animation: pulse 1s infinite; line-height: 1.05; }
+            .about-modal { display: none; position: fixed; inset: 0; background: rgba(2, 10, 26, 0.82); backdrop-filter: blur(8px); z-index: 1100; justify-content: center; align-items: center; padding: 1rem; }
+            .about-modal.active { display: flex; }
+            .about-modal-content { width: min(100%, 540px); background: rgba(9, 16, 34, 0.98); border: 1px solid rgba(255,255,255,0.08); border-radius: 24px; padding: 1.5rem; box-shadow: var(--shadow); }
+            .about-modal-content h2 { margin: 0 0 0.85rem; font-size: 1.45rem; }
+            .about-modal-content p { margin: 0 0 1rem; color: #d7def8; line-height: 1.7; }
+            .about-modal-content ul { margin: 0; padding-left: 1.2rem; color: #c9d3ef; }
+            .about-modal-content li { margin-bottom: 0.6rem; }
+            .about-modal-close { width: 100%; margin-top: 1rem; border: none; border-radius: 16px; padding: 0.9rem 1rem; background: var(--accent); color: #fff; cursor: pointer; font-weight: 700; }
+            @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+            @media (max-width: 768px) {
+                .board { width: 100%; padding: 0.7rem; }
+                .players { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.5rem; }
+                .player-card { padding: 0.5rem; min-height: 160px; }
+                .player-card h1 { font-size: 0.75rem; }
+                .score { font-size: 1rem; }
+                .control-row { gap: 0.2rem; }
+                .control-row button { flex: 1 1 48%; min-width: 90px; font-size: 0.82rem; }
+                .settings > div { flex-direction: column; align-items: stretch; }
+                .settings label { width: 100%; max-width: 100%; text-align: left; }
+                .settings select, .settings input { width: 100%; max-width: 100%; }
+                .settings input { min-width: 0 !important; }
+                .settings input, .settings select { min-width: 0; }
+                #matchScoreDisplay { flex-direction: column; align-items: center; gap: 0.45rem; padding: 0.65rem 0.75rem; }
+                #matchScoreDisplay span { max-width: 100%; width: 100%; text-align: center; font-size: 0.95rem; }
+                #matchPlayer1Name, #matchPlayer2Name { order: unset; }
+                #matchScore { order: unset; font-size: 1.2rem; }
+                .full-controls { flex-direction: column; align-items: stretch; }
+                .scoring-card { padding: 0.8rem; }
+                #matchScoreDisplay, #gameScoreDisplay { min-width: 0 !important; width: 100%; max-width: 100%; padding: 0.35rem 0.6rem; font-size: 1.1rem; box-sizing: border-box; }
+                #matchScoreDisplay span, #gameScoreDisplay span { max-width: 100%; }
+                .player-header { flex-direction: column; align-items: center; }
+                .player-header h1 { text-align: center; }
+                .edit-btn { width: 100%; max-width: 120px; }
+                .status { font-size: 0.8rem; }
+                .fullscreen-score { gap: 0.9rem; padding: 0.5rem; min-height: 100vh; }
+                .fullscreen-score-display { width: 100%; max-width: 94vw; min-height: 50vh; padding: 1.6rem 1rem; margin: auto; overflow: hidden; }
+                .fullscreen-score-display .player-scores { font-size: 3.2rem; margin-bottom: 0.8rem; }
+                .fullscreen-score-display .winner-text { font-size: 1.85rem; }
+                ol#historyList { max-height: 160px; font-size: 0.8rem; }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="board">
+            <div id="fullscreenScore" class="fullscreen-score">
+                <div class="fullscreen-score-display">
+                    <div class="fullscreen-game-label" id="fullscreenGameLabel"></div>
+                    <div style="font-size:2rem; font-weight:600; color:#d7def8; margin-bottom:1rem; display:flex; gap:2rem; justify-content:center;">
+                        <span id="fullscreenPlayer1Name">Player 1</span>
+                        <span id="fullscreenPlayer2Name">Player 2</span>
+                    </div>
+                    <div class="player-scores" id="fullscreenScoreText">0 : 0</div>
+                    <div class="winner-text" id="fullscreenWinnerText"></div>
+                </div>
+            </div>
+
+            <section class="head">
+                <h1>🎱 Billiards Score Tracker</h1>
+            </section>
+
+            <section class="scoring-card" style="margin-bottom:1rem; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 22px; padding: 1.35rem; text-align: center; box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 18px 40px rgba(0,0,0,0.22); backdrop-filter: blur(12px);">
+                <div class="score-section" style="margin-bottom:1rem;">
+                    <div class="score-label" id="scoreLabelText" style="font-size:1.25rem; font-weight:700; color:#eef2ff; margin-bottom:.65rem; letter-spacing:0.02em;">Match score:</div>
+                    <div id="matchScoreDisplay" class="score-value" style="display:grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); gap:0.8rem; align-items:center; font-size:2rem; font-weight:800; color:#ffffff; background: linear-gradient(135deg, rgba(59,130,246,0.92), rgba(29,78,216,0.95)); padding:1rem 1.1rem; border-radius:18px; border:1px solid rgba(255,255,255,0.12); box-shadow: 0 18px 35px rgba(14,45,107,0.35); width:100%; max-width:100%; box-sizing:border-box; min-height:68px; overflow:hidden;">
+                        <span id="matchPlayer1Name" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; font-size:0.95rem; text-align:left; color:rgba(255,255,255,0.88);">Player 1</span>
+                        <span id="matchScore" style="white-space:nowrap; font-size:1.5rem; justify-self:center;">0 : 0</span>
+                        <span id="matchPlayer2Name" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; font-size:0.95rem; text-align:right; color:rgba(255,255,255,0.88);">Player 2</span>
+                    </div>
+                </div>
+            </section> 
+
+            <div class="players">
+                <div class="player-card" id="player1Card">
+                    <div class="player-header">
+                        <h1 id="player1Title">Player 1</h1>
+                        <button id="editPlayer1" class="edit-btn" title="Edit name">✏️</button>
+                    </div>
+                    <input id="player1Name" type="text" placeholder="Enter Player 1 name" autocomplete="off" style="display:none;" />
+                    <div class="control-row">
+                        <button id="p1Add" class="accent">+1</button>
+                        <button id="p1Sub" class="secondary">-1</button>
+                    </div>
+                </div>
+
+                <div class="player-card" id="player2Card">
+                    <div class="player-header">
+                        <h1 id="player2Title">Player 2</h1>
+                        <button id="editPlayer2" class="edit-btn" title="Edit name">✏️</button>
+                    </div>
+                    <input id="player2Name" type="text" placeholder="Enter Player 2 name" autocomplete="off" style="display:none;" />
+                    <div class="control-row">
+                        <button id="p2Add" class="accent">+1</button>
+                        <button id="p2Sub" class="secondary">-1</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="status" id="statusMessage">Ready.</div>
+
+            <div class="full-controls">
+                <button id="resetMatch" class="danger">Reset Match</button>
+                <button id="aboutButton" class="secondary">About</button>
+            </div>
+
+            <section class="settings" style="margin-bottom:0.4rem; margin-top:0.8rem;">
+                <div style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center; justify-content:space-between; padding:0.45rem 0;">
+                    <label for="gameNameInput" style="color:#eef2ff; font-weight:700; font-size:0.95rem;">Game name:</label>
+                    <select id="gameNameInput" style="padding:0.85rem 1rem; border-radius:16px; background: rgba(255,255,255,0.05); color:#eef2ff; border:1px solid rgba(255,255,255,0.12); font-size:0.95rem; min-width:260px; flex:1; max-width:100%;">
+                        <option value="">Select a game</option>
+                        <option value="Dynamic Pyramid">Dynamic Pyramid</option>
+                        <option value="Combined Pyramid">Combined Pyramid</option>
+                        <option value="Moskva">Moscow</option>
+                        <option value="America">America</option>
+                    </select>
+                </div>
+                <div class="lang-switcher" style="margin-top:0.75rem; justify-content:center;">
+                    <button id="langEn">🇬🇧 English</button>
+                    <button id="langUk">🇺🇦 Українська</button>
+                </div>
+            </section>
+
+            <div id="aboutModal" class="about-modal" aria-hidden="true">
+                <div class="about-modal-content" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
+                    <h2 id="aboutTitle">About</h2>
+                    <p id="aboutDescription">A lightweight billiards score tracker with localized UI and match controls.</p>
+                    <ul>
+                        <li id="aboutFeature1">Track match score with quick +1 / -1 buttons.</li>
+                        <li id="aboutFeature2">Switch between English and Ukrainian interface text.</li>
+                        <li id="aboutFeature3">Save player names, game selection, and match progress.</li>
+                    </ul>
+                    <button id="aboutCloseButton" class="about-modal-close">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+const STORAGE_KEY = 'billiards-score-tracker-v1';
+const DEFAULT_STATE = {
+    player1Name: 'Я',
+    player2Name: 'Соперник',
+    player1MatchScore: 0,
+    player2MatchScore: 0,
+    gameName: '',
+    language: 'en',
+    statusMessage: 'Ready.'
+};
+
+// Return the visible label for the currently selected game ID.
+// This keeps the app display language-specific while storing a stable internal value.
+function getCurrentGameLabel() {
+    const lang = state.language || 'en';
+    const options = translations[lang] && translations[lang].gameOptions;
+    if (!Array.isArray(options)) return state.gameName || '';
+    const selected = options.find((opt) => opt.id === state.gameName);
+    return selected ? selected.label : state.gameName || '';
+}
+
+// Normalize any saved or legacy game selection value into the current ID form.
+// This allows old values like 'Moskva' or translated labels to still work.
+function normalizeGameName(value) {
+    if (!value) return '';
+    const allOptions = Object.values(translations).flatMap(lang => lang.gameOptions || []);
+    const found = allOptions.find(option => option.id === value || option.value === value || option.label === value);
+    return found ? found.id : '';
+}
+
+// Translation dictionary for UI text and localized game option labels.
+// The current app stores game selection by ID, and the label is shown in the selected language.
+const translations = {
+    en: {
+        title: '🎱 Billiards Score Tracker',
+        gameNameLabel: 'Game name:',
+        selectGame: 'Select a game',
+        gameOptions: [
+            { id: 'dynamic', value: 'Dynamic Pyramid', label: 'Dynamic Pyramid' },
+            { id: 'combined', value: 'Combined Pyramid', label: 'Combined Pyramid' },
+            { id: 'moskva', value: 'Moskva', label: 'Moscow' },
+            { id: 'america', value: 'America', label: 'America' }
+        ],
+        matchScore: 'Match score:',
+        resetMatch: 'Reset Match',
+        ready: 'Ready.',
+        matchUpdated: 'Match score updated.',
+        matchAdjusted: 'Match score adjusted.',
+        matchReset: 'Match reset.',
+        gameNameSet: (game) => `Game name set to "${game}".`,
+        leading: (name) => `${name} is LEADING!`,
+        player1: 'Player 1',
+        player2: 'Player 2',
+        player1Placeholder: 'Enter Player 1 name',
+        player2Placeholder: 'Enter Player 2 name',
+        languageEnglish: 'English',
+        languageUkrainian: 'Українська',
+        about: 'About',
+        aboutTitle: 'About this app',
+        aboutDescription: 'A compact billiards score tracker with local state persistence and fast score updates.',
+        aboutFeature1: 'Track match score with quick +1 / -1 buttons.',
+        aboutFeature2: 'Switch between English and Ukrainian interface text.',
+        aboutFeature3: 'Save player names, game selection, and match score.',
+        close: 'Close'
+    },
+    uk: {
+        title: '🎱 Трекер рахунку більярду',
+        gameNameLabel: 'Назва гри:',
+        selectGame: 'Оберіть гру',
+        gameOptions: [
+            { id: 'dynamic', value: 'Dynamic Pyramid', label: 'Динамічна піраміда' },
+            { id: 'combined', value: 'Combined Pyramid', label: 'Комбінована піраміда' },
+            { id: 'moskva', value: 'Moskva', label: 'Москва' },
+            { id: 'america', value: 'America', label: 'Америка' }
+        ],
+        matchScore: 'Рахунок матчу:',
+        resetMatch: 'Скинути матч',
+        ready: 'Готово.',
+        matchUpdated: 'Рахунок матчу оновлено.',
+        matchAdjusted: 'Рахунок налаштовано.',
+        matchReset: 'Матч скинуто.',
+        gameNameSet: (game) => `Назва гри: "${game}".`,
+        leading: (name) => `${name} лідирує!`,
+        player1: 'Гравець 1',
+        player2: 'Гравець 2',
+        player1Placeholder: 'Введіть ім’я гравця 1',
+        player2Placeholder: 'Введіть ім’я гравця 2',
+        languageEnglish: 'English',
+        languageUkrainian: 'Українська',
+        about: 'Про програму',
+        aboutTitle: 'Про цю програму',
+        aboutDescription: 'Компактний трекер рахунку більярду з локальним збереженням і швидким керуванням рахунком.',
+        aboutFeature1: 'Відстежуйте рахунок матчу за допомогою кнопок +1 / -1.',
+        aboutFeature2: 'Перемикайте інтерфейс між англійською та українською.',
+        aboutFeature3: 'Збереження імен гравців, обраної гри та рахунку матчу.',
+        close: 'Закрити'
+    }
+};
+
+const state = { ...DEFAULT_STATE };
+
+function saveState() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function loadState() {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return;
+        Object.assign(state, DEFAULT_STATE, parsed);
+        // Convert any stored game value into the proper internal game ID.
+        state.gameName = normalizeGameName(state.gameName);
+    } catch (error) {
+        console.warn('Could not load saved state:', error);
+    }
+}
+
+function toggleAboutModal(show) {
+    const modal = document.getElementById('aboutModal');
+    if (!modal) return;
+    modal.classList.toggle('active', show);
+    modal.setAttribute('aria-hidden', show ? 'false' : 'true');
+}
+
+// Translation helper. Supports both string values and functions for dynamic text.
+function t(key, ...args) {
+    const lang = state.language || 'en';
+    const translation = translations[lang] && translations[lang][key];
+    if (typeof translation === 'function') {
+        return translation(...args);
+    }
+    return translation || key;
+}
+
+function setStatus(text) {
+    state.statusMessage = text;
+    const statusEl = document.getElementById('statusMessage');
+    if (statusEl) statusEl.textContent = text;
+}
+
+function updateView() {
+    // Render all localized UI text and current state values.
+    document.querySelector('.head h1').textContent = t('title');
+    document.getElementById('player1Title').textContent = state.player1Name || t('player1');
+    document.getElementById('player2Title').textContent = state.player2Name || t('player2');
+
+    // Update scoring card displays
+    const p1Name = state.player1Name || t('player1');
+    const p2Name = state.player2Name || t('player2');
+
+    // Update score label with game name if selected
+    const scoreLabel = state.gameName ? getCurrentGameLabel() : t('matchScore');
+    document.getElementById('scoreLabelText').textContent = scoreLabel;
+
+    // Update match score display
+    document.getElementById('matchPlayer1Name').textContent = p1Name;
+    document.getElementById('matchScore').textContent = `${state.player1MatchScore} : ${state.player2MatchScore}`;
+    document.getElementById('matchPlayer2Name').textContent = p2Name;
+
+    const gameNameLabelEl = document.querySelector('label[for="gameNameInput"]');
+    if (gameNameLabelEl) {
+        gameNameLabelEl.textContent = t('gameNameLabel');
+    }
+    // Rebuild the game dropdown options on each view update so the labels stay localized.
+
+    const gameNameSelectEl = document.getElementById('gameNameInput');
+    if (gameNameSelectEl) {
+        gameNameSelectEl.innerHTML = '';
+        const emptyOption = document.createElement('option');
+        emptyOption.value = '';
+        emptyOption.textContent = t('selectGame');
+        gameNameSelectEl.appendChild(emptyOption);
+
+        const options = t('gameOptions');
+        if (Array.isArray(options)) {
+            options.forEach(option => {
+                const opt = document.createElement('option');
+                opt.value = option.id;
+                opt.textContent = option.label;
+                gameNameSelectEl.appendChild(opt);
+            });
+        }
+        gameNameSelectEl.value = state.gameName || '';
+    }
+
+    const resetMatchBtn = document.getElementById('resetMatch');
+    if (resetMatchBtn) {
+        resetMatchBtn.textContent = t('resetMatch');
+    }
+    const aboutBtn = document.getElementById('aboutButton');
+    if (aboutBtn) {
+        aboutBtn.textContent = t('about');
+    }
+    document.getElementById('aboutTitle').textContent = t('aboutTitle');
+    document.getElementById('aboutDescription').textContent = t('aboutDescription');
+    document.getElementById('aboutFeature1').textContent = t('aboutFeature1');
+    document.getElementById('aboutFeature2').textContent = t('aboutFeature2');
+    document.getElementById('aboutFeature3').textContent = t('aboutFeature3');
+    document.getElementById('aboutCloseButton').textContent = t('close');
+
+    const p1Input = document.getElementById('player1Name');
+    const p2Input = document.getElementById('player2Name');
+    if (p1Input) {
+        p1Input.value = state.player1Name;
+        p1Input.placeholder = t('player1Placeholder');
+        p1Input.style.display = 'none';
+    }
+    if (p2Input) {
+        p2Input.value = state.player2Name;
+        p2Input.placeholder = t('player2Placeholder');
+        p2Input.style.display = 'none';
+    }
+
+    setStatus(state.statusMessage || t('ready'));
+
+    const langEnButton = document.getElementById('langEn');
+    const langUkButton = document.getElementById('langUk');
+    if (langEnButton && langUkButton) {
+        langEnButton.classList.toggle('active', state.language === 'en');
+        langUkButton.classList.toggle('active', state.language === 'uk');
+    }
+
+    updateFullscreenScore();
+}
+
+function applyMatchPoint(player) {
+    if (player === 1) {
+        state.player1MatchScore += 1;
+    } else {
+        state.player2MatchScore += 1;
+    }
+    setStatus(t('matchUpdated'));
+    saveState();
+    updateView();
+}
+
+function applyMatchSubtraction(player) {
+    if (player === 1) {
+        state.player1MatchScore = Math.max(0, state.player1MatchScore - 1);
+    } else {
+        state.player2MatchScore = Math.max(0, state.player2MatchScore - 1);
+    }
+    setStatus(t('matchAdjusted'));
+    saveState();
+    updateView();
+}
+
+function checkWinCondition() {
+    if (state.player1GameScore >= state.winTarget) {
+        updateMatchHistory();
+        state.player1MatchScore += 1;
+        state.player1GameScore = 0;
+        state.player2GameScore = 0;
+        setStatus(`${state.player1Name || 'Player 1'} wins this game! Match score incremented.`);
+        return;
+    }
+    if (state.player2GameScore >= state.winTarget) {
+        updateMatchHistory();
+        state.player2MatchScore += 1;
+        state.player1GameScore = 0;
+        state.player2GameScore = 0;
+        setStatus(`${state.player2Name || 'Player 2'} wins this game! Match score incremented.`);
+    }
+}
+
+function updateMatchHistory() {
+    const gameLabel = state.gameName ? `${state.gameName} - ` : '';
+    const historyEntry = `${gameLabel}${state.player1Name || 'Player 1'} <strong>${state.player1GameScore}:${state.player2GameScore}</strong> ${state.player2Name || 'Player 2'}`;
+    state.history.push(historyEntry);
+}
+
+function resetMatch() {
+    state.player1MatchScore = 0;
+    state.player2MatchScore = 0;
+    setStatus(t('matchReset'));
+    saveState();
+    updateView();
+}
+
+function updateFullscreenScore() {
+    document.getElementById('fullscreenPlayer1Name').textContent = state.player1Name || t('player1');
+    document.getElementById('fullscreenPlayer2Name').textContent = state.player2Name || t('player2');
+    document.getElementById('fullscreenScoreText').textContent = `${state.player1MatchScore} : ${state.player2MatchScore}`;
+    const currentGameLabel = state.gameName ? getCurrentGameLabel() : '';
+    document.getElementById('fullscreenGameLabel').textContent = currentGameLabel;
+    let winnerText = '';
+    if (state.player1MatchScore > state.player2MatchScore) {
+        winnerText = t('leading', state.player1Name || t('player1'));
+    } else if (state.player2MatchScore > state.player1MatchScore) {
+        winnerText = t('leading', state.player2Name || t('player2'));
+    }
+    document.getElementById('fullscreenWinnerText').textContent = winnerText;
+}
+
+function bindEvents() {
+    // Wire up all UI interactions once, then keep the state in sync.
+    // Edit button event listeners
+    document.getElementById('editPlayer1').addEventListener('click', () => {
+        const input = document.getElementById('player1Name');
+        input.style.display = 'block';
+        input.focus();
+        input.select();
+    });
+
+    document.getElementById('editPlayer2').addEventListener('click', () => {
+        const input = document.getElementById('player2Name');
+        input.style.display = 'block';
+        input.focus();
+        input.select();
+    });
+
+    // Input blur event listeners (when user clicks away)
+    document.getElementById('player1Name').addEventListener('blur', (ev) => {
+        state.player1Name = ev.target.value.trim();
+        ev.target.style.display = 'none';
+        saveState();
+        updateView();
+    });
+
+    document.getElementById('player2Name').addEventListener('blur', (ev) => {
+        state.player2Name = ev.target.value.trim();
+        ev.target.style.display = 'none';
+        saveState();
+        updateView();
+    });
+
+    // Allow Enter key to confirm name change
+    document.getElementById('player1Name').addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter') {
+            ev.target.blur();
+        }
+    });
+
+    document.getElementById('player2Name').addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter') {
+            ev.target.blur();
+        }
+    });
+
+    const gameNameSelect = document.getElementById('gameNameInput');
+    if (gameNameSelect) {
+        gameNameSelect.addEventListener('change', (ev) => {
+            state.gameName = ev.target.value;
+            setStatus(t('gameNameSet', getCurrentGameLabel()));
+            saveState();
+            updateView();
+        });
+    }
+
+    const langEnButton = document.getElementById('langEn');
+    if (langEnButton) {
+        langEnButton.addEventListener('click', () => {
+            state.language = 'en';
+            state.statusMessage = t('ready');
+            saveState();
+            updateView();
+        });
+    }
+    const langUkButton = document.getElementById('langUk');
+    if (langUkButton) {
+        langUkButton.addEventListener('click', () => {
+            state.language = 'uk';
+            state.statusMessage = t('ready');
+            saveState();
+            updateView();
+        });
+    }
+
+    document.getElementById('p1Add').addEventListener('click', () => applyMatchPoint(1));
+    document.getElementById('p2Add').addEventListener('click', () => applyMatchPoint(2));
+
+    document.getElementById('p1Sub').addEventListener('click', () => applyMatchSubtraction(1));
+    document.getElementById('p2Sub').addEventListener('click', () => applyMatchSubtraction(2));
+
+    document.getElementById('resetMatch').addEventListener('click', resetMatch);
+    const aboutButton = document.getElementById('aboutButton');
+    if (aboutButton) {
+        aboutButton.addEventListener('click', () => toggleAboutModal(true));
+    }
+    const aboutCloseButton = document.getElementById('aboutCloseButton');
+    if (aboutCloseButton) {
+        aboutCloseButton.addEventListener('click', () => toggleAboutModal(false));
+    }
+    const aboutModal = document.getElementById('aboutModal');
+    if (aboutModal) {
+        aboutModal.addEventListener('click', (event) => {
+            if (event.target === aboutModal) {
+                toggleAboutModal(false);
+            }
+        });
+    }
+
+    // Toggle fullscreen score view
+    document.getElementById('matchScoreDisplay').addEventListener('click', () => {
+        const fullscreenEl = document.getElementById('fullscreenScore');
+        fullscreenEl.classList.toggle('active');
+        updateFullscreenScore();
+    });
+
+    document.getElementById('fullscreenScore').addEventListener('click', (e) => {
+        if (e.target.id === 'fullscreenScore') {
+            e.target.classList.remove('active');
+        }
+    });
+}
+
+function init() {
+    loadState();
+    bindEvents();
+    updateView();
+}
+
+window.addEventListener('DOMContentLoaded', init);
+        </script>
+    </body>
+</html>
